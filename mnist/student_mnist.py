@@ -5,14 +5,18 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 from torchvision import datasets, transforms
-import os
 import time
 from pathlib import Path
+import itertools
+import threading
+import sys
 
 
 FILE = Path(__file__).resolve()
 BASE_DIR = FILE.parent
 start_time = time.time()
+
+done = False
 
 
 # Training settings
@@ -51,6 +55,16 @@ def parse_setting():
     print(FILE.stem, args)
 
     return args
+
+
+def _animate():
+    for c in itertools.cycle(['|', '/', '-', '\\']):
+        if done:
+            break
+        sys.stdout.write(f'\revaluating... ' + c)
+        sys.stdout.flush()  # flush buffer
+        time.sleep(0.1)
+    sys.stdout.write('\rDone!          \n')
 
 
 class Net(nn.Module):
@@ -153,10 +167,15 @@ def main(args):
     train
     --------------------------------------------------------------------------------------------------------------------
     """
+    global done
+
     for epoch in range(1, args.epochs + 1):
         train(model, train_loader, optimizer, epoch, args)
+        done = False; threading.Thread(name='train_evaluate', target=_animate,  daemon=True).start()
         train_evaluate(model, train_loader, args)
+
         test(model, test_loader, args)
+        done = True
 
     """
     --------------------------------------------------------------------------------------------------------------------
@@ -194,3 +213,4 @@ if __name__ == '__main__':
     my_args = parse_setting()
 
     main(my_args)
+
