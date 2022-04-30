@@ -40,11 +40,11 @@ def main(args):
     --------------------------------------------------------------------------------------------------------------------
     """
     for epoch in range(1, args.epochs + 1):
-        train(model, train_loader, optimizer, epoch, args)
+        train([model], train_loader, optimizer, epoch, args)
         done = False; threading.Thread(name='train_evaluate', target=_animate, args=(lambda: done,), daemon=True).start()
         train_evaluate(model, train_loader, args)
 
-        test(model, test_loader, args)
+        test(model, test_loader, cuda=args.cuda)
         done = True
 
     """

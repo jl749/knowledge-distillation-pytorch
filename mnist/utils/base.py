@@ -5,7 +5,7 @@ parse_setting, train, train_evaluate, test
 from pathlib import Path
 import sys
 import itertools
-from typing import Callable
+from typing import Callable, List
 import time
 
 import torch
@@ -83,21 +83,42 @@ def get_Train_Test_loaders(where_to_download: Path, **kwargs):
     return train_loader, test_loader
 
 
-def train(model, train_loader, optimizer, epoch, args):
-    model.train()
-    for batch_idx, (data, target) in enumerate(train_loader):
-        if args.cuda:
-            data, target = data.cuda(), target.cuda()
-        optimizer.zero_grad()
-        output = model(data)
-        # loss = distillation(output, target, teacher_output, T=3, alpha=0.5)
-        # loss = F.mse_loss(F.softmax(output/3.0), F.softmax(teacher_output/3.0))
-        loss = F.cross_entropy(output, target)
-        loss.backward()
-        optimizer.step()
-        if batch_idx % args.log_interval == 0:
-            print(f'Train Epoch: {epoch} [{batch_idx * len(data)}/{len(train_loader.dataset)} '  # len(train_loader)=batch number
-                  f'({100. * batch_idx / len(train_loader):.0f}%)\tLoss: {loss.item():.6f}]')
+def train(models: List[torch.nn.Module], train_loader, optimizer, epoch, args,
+          distillation: Callable = None):
+    if distillation is None:
+        """ normal train """
+        model = models[0]
+        model.train()
+        for batch_idx, (data, target) in enumerate(train_loader):
+            if args.cuda:
+                data, target = data.cuda(), target.cuda()
+            optimizer.zero_grad()
+            output = model(data)
+            # loss = distillation(output, target, teacher_output, T=3, alpha=0.5)
+            # loss = F.mse_loss(F.softmax(output/3.0), F.softmax(teacher_output/3.0))
+            loss = F.cross_entropy(output, target)
+            loss.backward()
+            optimizer.step()
+            if batch_idx % args.log_interval == 0:
+                print(f'Train Epoch: {epoch} [{batch_idx * len(data)}/{len(train_loader.dataset)} '  # len(train_loader)=batch number
+                      f'({100. * batch_idx / len(train_loader):.0f}%)\tLoss: {loss.item():.6f}]')
+    else:
+        """ distillation """
+        model, teacher_model = models
+        model.train()
+        teacher_model.eval()
+        for batch_idx, (data, target) in enumerate(train_loader):
+            if args.cuda:
+                data, target = data.cuda(), target.cuda()
+            optimizer.zero_grad()
+            output = model(data)
+            teacher_output = teacher_model(data).detach()
+            loss = distillation(output, target, teacher_output)  # default T=20.0, alpha=0.7
+            loss.backward()
+            optimizer.step()
+            if batch_idx % args.log_interval == 0:
+                print(f'Train Epoch: {epoch} [{batch_idx * len(data)}/{len(train_loader.dataset)} '  # len(train_loader)=batch number
+                      f'({100. * batch_idx / len(train_loader):.0f}%)\tLoss: {loss.item():.6f}]')
 
 
 def train_evaluate(model, train_loader, args):
@@ -117,12 +138,12 @@ def train_evaluate(model, train_loader, args):
           f'({100. * correct / len(train_loader.dataset):.0f}%)\n')
 
 
-def test(model, test_loader, args):
+def test(model, test_loader, cuda: bool = False):
     model.eval()
     test_loss = 0
     correct = 0
     for data, target in test_loader:
-        if args.cuda:
+        if cuda:
             data, target = data.cuda(), target.cuda()
         output = model(data)
         test_loss += F.cross_entropy(output, target).item()  # sum up batch loss

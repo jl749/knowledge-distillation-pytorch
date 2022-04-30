@@ -40,11 +40,11 @@ def main(args):
     --------------------------------------------------------------------------------------------------------------------
     """
     for epoch in range(1, args.epochs + 1):
-        train(model, train_loader, optimizer, epoch, args)
+        train([model], train_loader, optimizer, epoch, args)
         done = False; threading.Thread(name='train_evaluate', target=_animate, args=(lambda: done,), daemon=True).start()
         train_evaluate(model, train_loader, args)
 
-        test(model, test_loader, args)
+        test(model, test_loader, cuda=args.cuda)
         done = True
 
     """
@@ -55,7 +55,7 @@ def main(args):
     print("--- %s seconds ---" % (time.time() - start_time))
 
     # test_model = Net()
-    # test_model.load_state_dict(torch.load('teacher_MLP.pth.tar'))
+    #
     #
     # test(test_model, test_loader, args)
     # for data, target in test_loader:
