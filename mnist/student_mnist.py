@@ -1,28 +1,16 @@
 from __future__ import print_function
-import sys
-import torch
-import torch.optim as optim
 from pathlib import Path
 import threading
-import itertools
 import time
+
+import torch
+import torch.optim as optim
 from utils.base import *
 from utils.models import StudentNet
 
 
 FILE = Path(__file__).resolve()
 BASE_DIR = FILE.parent
-done = False
-
-
-def _animate():
-    for c in itertools.cycle(['|', '/', '-', '\\']):
-        if done:
-            break
-        sys.stdout.write(f'\revaluating... ' + c)
-        sys.stdout.flush()  # flush buffer
-        time.sleep(0.1)
-    sys.stdout.write('\rDone!          \n')
 
 
 def main(args):
@@ -51,11 +39,9 @@ def main(args):
     train
     --------------------------------------------------------------------------------------------------------------------
     """
-    global done
-
     for epoch in range(1, args.epochs + 1):
         train(model, train_loader, optimizer, epoch, args)
-        done = False; threading.Thread(name='train_evaluate', target=_animate,  daemon=True).start()
+        done = False; threading.Thread(name='train_evaluate', target=_animate, args=(lambda: done,), daemon=True).start()
         train_evaluate(model, train_loader, args)
 
         test(model, test_loader, args)

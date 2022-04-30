@@ -3,13 +3,28 @@ base util functions
 parse_setting, train, train_evaluate, test
 """
 from pathlib import Path
+import sys
+import itertools
+from typing import Callable
+import time
+
 import torch
 import argparse
 import torch.nn.functional as F
 from torchvision import datasets, transforms
 
 
-__all__ = ['parse_setting', 'get_Train_Test_loaders', 'train', 'train_evaluate', 'test']
+__all__ = ['parse_setting', 'get_Train_Test_loaders', 'train', 'train_evaluate', 'test', '_animate']
+
+
+def _animate(done: Callable):
+    for c in itertools.cycle(['|', '/', '-', '\\']):
+        if done():
+            break
+        sys.stdout.write(f'\revaluating... ' + c)
+        sys.stdout.flush()  # flush buffer
+        time.sleep(0.1)
+    sys.stdout.write('\rDone!          \n')
 
 
 # Training settings
