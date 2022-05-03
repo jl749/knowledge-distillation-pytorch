@@ -13,8 +13,8 @@ FILE = Path(__file__).resolve()
 BASE_DIR = FILE.parent
 
 
-def distill_unlabeled(y, teacher_scores, T):
-    return F.kl_div(F.log_softmax(y/T), F.softmax(teacher_scores/T)) * T * T
+def distill_unlabeled(y, labels, teacher_scores, T=20.0):
+    return F.kl_div(F.log_softmax(y/T, dim=1), F.softmax(teacher_scores/T, dim=1)) * T * T
 
 
 def main(args):
@@ -39,6 +39,7 @@ def main(args):
 
     model = StudentNet()
     if args.cuda:
+        teacher_model.cuda()
         model.cuda()
 
     optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=args.momentum)
@@ -48,24 +49,17 @@ def main(args):
     --------------------------------------------------------------------------------------------------------------------
     """
     for epoch in range(1, args.epochs + 1):
-        train(model, train_loader, optimizer, epoch, args)
+        train([model, teacher_model], train_loader, optimizer, epoch, args, distillation=distill_unlabeled)
         done = False; threading.Thread(name='train_evaluate', target=_animate, args=(lambda: done,), daemon=True).start()
         train_evaluate(model, train_loader, args)
 
         test(model, test_loader, args)
         done = True
 
-    for epoch in range(1, args.epochs + 1):
-        train([model, teacher_model], train_loader, optimizer, epoch, args, distillation=distill_unlabeled)
-        done = False; threading.Thread(name='train_evaluate', target=_animate, args=(lambda: done,), daemon=True).start()
-
-        train_evaluate(model, train_loader, args)
-        test(model)
-
     """
     --------------------------------------------------------------------------------------------------------------------
     """
-    torch.save(model.state_dict(), 'distill.pth.tar')
+    torch.save(model.state_dict(), 'distill_unlabeled.pth.tar')
     # the_model = Net()
     # the_model.load_state_dict(torch.load('student.pth.tar'))
 

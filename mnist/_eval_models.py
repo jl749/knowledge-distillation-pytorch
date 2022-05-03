@@ -15,6 +15,7 @@ _, test_loader = get_Train_Test_loaders(BASE_DIR, **kwargs)
 
 student_model = StudentNet()
 student_model.load_state_dict(torch.load('student.pth.tar'))
+print("\nstudent")
 test(student_model, test_loader)
 # for data, target in test_loader:
 #     teacher_out = student_model(data)
@@ -22,9 +23,18 @@ test(student_model, test_loader)
 
 teacher_model = TeacherNet()
 teacher_model.load_state_dict(torch.load('teacher_MLP.pth.tar'))
+print("\nteacher")
 test(teacher_model, test_loader)
 # for data, target in test_loader:
 #     teacher_out = teacher_model(data)
 # print(teacher_out)
 
-# TODO: add distilled student
+teacher_model = StudentNet()
+teacher_model.load_state_dict(torch.load('distill.pth.tar'))
+print("\ndistill")
+test(teacher_model, test_loader)
+
+teacher_model = StudentNet()
+teacher_model.load_state_dict(torch.load('distill_unlabeled.pth.tar'))
+print("\ndistill_unlabeled")
+test(teacher_model, test_loader)

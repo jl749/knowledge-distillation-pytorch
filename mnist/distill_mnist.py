@@ -14,7 +14,7 @@ BASE_DIR = FILE.parent
 
 
 def distillation(y, labels, teacher_scores, T=20.0, alpha=0.7):
-    return F.kl_div(F.log_softmax(y/T), F.softmax(teacher_scores/T)) * (T*T * 2.0 * alpha)\
+    return F.kl_div(F.log_softmax(y/T, dim=1), F.softmax(teacher_scores/T, dim=1)) * (T*T * 2.0 * alpha)\
            + F.cross_entropy(y, labels) * (1. - alpha)
 
 
@@ -40,6 +40,7 @@ def main(args):
 
     model = StudentNet()
     if args.cuda:
+        teacher_model.cuda()
         model.cuda()
 
     optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=args.momentum)
